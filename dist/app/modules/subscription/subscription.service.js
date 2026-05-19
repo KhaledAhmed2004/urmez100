@@ -1,0 +1,180 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.processGoogleWebhook = exports.verifyGooglePurchase = exports.processAppleWebhook = exports.verifyApplePurchase = exports.setFreePlan = exports.getMySubscription = void 0;
+const mongoose_1 = require("mongoose");
+const http_status_1 = __importDefault(require("http-status"));
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const subscription_model_1 = require("./subscription.model");
+const subscription_interface_1 = require("./subscription.interface");
+const apple_verify_1 = require("./providers/apple/apple.verify");
+const apple_webhook_1 = require("./providers/apple/apple.webhook");
+const google_verify_1 = require("./providers/google/google.verify");
+const google_webhook_1 = require("./providers/google/google.webhook");
+const plan_mapper_1 = require("./helpers/plan.mapper");
+const ensureSubscriptionDoc = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = new mongoose_1.Types.ObjectId(userId);
+    const doc = yield subscription_model_1.Subscription.findByUser(id);
+    if (doc)
+        return doc;
+    return yield subscription_model_1.Subscription.upsertForUser(id, {
+        plan: subscription_interface_1.SUBSCRIPTION_PLAN.FREE,
+        status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+    });
+});
+const getMySubscription = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return ensureSubscriptionDoc(userId);
+});
+exports.getMySubscription = getMySubscription;
+const setFreePlan = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(userId), {
+        plan: subscription_interface_1.SUBSCRIPTION_PLAN.FREE,
+        status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+    });
+});
+exports.setFreePlan = setFreePlan;
+const verifyApplePurchase = (userId, signedTransactionInfo) => __awaiter(void 0, void 0, void 0, function* () {
+    // 1. Cryptographically verify the JWS with Apple's library.
+    const decoded = yield (0, apple_verify_1.verifyAppleTransaction)(signedTransactionInfo);
+    // 2. Fraud guard: reject if this transaction is already bound to a
+    //    different user account.
+    const existingByTx = yield subscription_model_1.Subscription.findOne({
+        appleOriginalTransactionId: decoded.originalTransactionId,
+    });
+    if (existingByTx && existingByTx.userId.toString() !== userId) {
+        throw new ApiError_1.default(http_status_1.default.CONFLICT, 'This Apple transaction is already linked to another account');
+    }
+    // 3. Map the store-side productId to a local plan.
+    const plan = (0, plan_mapper_1.mapAppleProductToPlan)(decoded.productId);
+    if (plan === subscription_interface_1.SUBSCRIPTION_PLAN.FREE) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, `Unknown or unsupported productId: ${decoded.productId}`);
+    }
+    // 4. Persist the subscription for this user.
+    const updated = yield subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(userId), {
+        plan,
+        status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+        platform: subscription_interface_1.SUBSCRIPTION_PLATFORM.APPLE,
+        environment: decoded.environment,
+        productId: decoded.productId,
+        appleOriginalTransactionId: decoded.originalTransactionId,
+        appleLatestTransactionId: decoded.transactionId,
+        startedAt: new Date(decoded.purchaseDate),
+        currentPeriodEnd: decoded.expiresDate
+            ? new Date(decoded.expiresDate)
+            : null,
+        canceledAt: null,
+        gracePeriodEndsAt: null,
+        metadata: {
+            appAccountToken: decoded.appAccountToken,
+            bundleId: decoded.bundleId,
+        },
+    });
+    return updated;
+});
+exports.verifyApplePurchase = verifyApplePurchase;
+const processAppleWebhook = (signedPayload) => __awaiter(void 0, void 0, void 0, function* () {
+    return (0, apple_webhook_1.handleAppleNotification)(signedPayload);
+});
+exports.processAppleWebhook = processAppleWebhook;
+const verifyGooglePurchase = (userId, purchaseToken, productId) => __awaiter(void 0, void 0, void 0, function* () {
+    // 1. Pull the authoritative subscription state from Google.
+    const decoded = yield (0, google_verify_1.verifyGoogleSubscription)(purchaseToken, productId);
+    // 2. Fraud guard: a purchase token must not be linked to a different user.
+    const existingByToken = yield subscription_model_1.Subscription.findOne({
+        googlePurchaseToken: decoded.purchaseToken,
+    });
+    if (existingByToken && existingByToken.userId.toString() !== userId) {
+        throw new ApiError_1.default(http_status_1.default.CONFLICT, 'This Google purchase is already linked to another account');
+    }
+    // 3. Map productId → local plan.
+    const plan = (0, plan_mapper_1.mapGoogleProductToPlan)(decoded.productId);
+    if (plan === subscription_interface_1.SUBSCRIPTION_PLAN.FREE) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, `Unknown or unsupported productId: ${decoded.productId}`);
+    }
+    // 4. Translate Google's subscriptionState into our local status.
+    const isActiveState = decoded.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE' ||
+        decoded.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD';
+    if (!isActiveState) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, `Google subscription is not active (state: ${decoded.subscriptionState})`);
+    }
+    const localStatus = decoded.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+        ? subscription_interface_1.SUBSCRIPTION_STATUS.PAST_DUE
+        : subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE;
+    // 5. Persist for this user.
+    const updated = yield subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(userId), {
+        plan,
+        status: localStatus,
+        platform: subscription_interface_1.SUBSCRIPTION_PLATFORM.GOOGLE,
+        environment: decoded.environment,
+        productId: decoded.productId,
+        autoRenewing: decoded.autoRenewing,
+        googlePurchaseToken: decoded.purchaseToken,
+        googleOrderId: decoded.orderId,
+        startedAt: decoded.startTime ? new Date(decoded.startTime) : null,
+        currentPeriodEnd: decoded.expiryTime
+            ? new Date(decoded.expiryTime)
+            : null,
+        canceledAt: null,
+        gracePeriodEndsAt: localStatus === subscription_interface_1.SUBSCRIPTION_STATUS.PAST_DUE && decoded.expiryTime
+            ? new Date(decoded.expiryTime)
+            : null,
+        metadata: {
+            acknowledgementState: decoded.acknowledgementState,
+            linkedPurchaseToken: decoded.linkedPurchaseToken,
+            testPurchase: decoded.testPurchase,
+        },
+    });
+    return updated;
+});
+exports.verifyGooglePurchase = verifyGooglePurchase;
+const processGoogleWebhook = (rawBody, authorizationHeader) => __awaiter(void 0, void 0, void 0, function* () {
+    return (0, google_webhook_1.handleGoogleNotification)(rawBody, authorizationHeader);
+});
+exports.processGoogleWebhook = processGoogleWebhook;
+const getSubscriptionPackages = () => __awaiter(void 0, void 0, void 0, function* () {
+    // Static packages for now as per .md spec
+    return [
+        {
+            id: 'package_weekly',
+            name: 'Weekly Pass',
+            price: 9.99,
+            duration: '7 days',
+            benefits: ['Unlimited access', 'No ads'],
+        },
+        {
+            id: 'package_monthly',
+            name: 'Monthly Pass',
+            price: 29.99,
+            duration: '30 days',
+            benefits: ['Unlimited access', 'Offline download'],
+        },
+        {
+            id: 'package_yearly',
+            name: 'Yearly Pass',
+            price: 199.99,
+            duration: '1 year',
+            benefits: ['Full access', 'Priority support'],
+        },
+    ];
+});
+const SubscriptionService = {
+    getMySubscription: exports.getMySubscription,
+    setFreePlan: exports.setFreePlan,
+    verifyApplePurchase: exports.verifyApplePurchase,
+    processAppleWebhook: exports.processAppleWebhook,
+    verifyGooglePurchase: exports.verifyGooglePurchase,
+    processGoogleWebhook: exports.processGoogleWebhook,
+    getSubscriptionPackages,
+};
+exports.default = SubscriptionService;
