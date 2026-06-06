@@ -1235,13 +1235,30 @@ const createMovieToDB = async (payload: any) => {
 };
 
 const createSeriesToDB = async (payload: any) => {
-  const { isDraft, availability, genres, releaseYear, rating, views, isPremium, isRecent, isPopularSeries, cast, thumbnail, ...rest } = payload;
+  const { 
+    isDraft, 
+    availability, 
+    genres, 
+    releaseYear, 
+    rating, 
+    views, 
+    isPremium, 
+    isRecent, 
+    isPopularSeries, 
+    cast, 
+    thumbnail,
+    poster,
+    trailerUrl,
+    ...rest 
+  } = payload;
 
   const seriesData: any = {
     ...rest,
+    poster: poster || thumbnail, // Use poster or fallback to thumbnail
+    trailerUrl: trailerUrl,
     genres: Array.isArray(genres) ? genres : (genres ? [genres] : []),
     cast: Array.isArray(cast) ? cast : (cast ? [cast] : []),
-    duration: 0, // Series duration is aggregate of episodes usually
+    duration: 0, 
     releaseYear: releaseYear ? Number(releaseYear) : new Date().getFullYear(),
     rating: rating ? Number(rating) : 0,
     views: views ? Number(views) : 0,
@@ -1259,9 +1276,28 @@ const createSeriesToDB = async (payload: any) => {
 };
 
 const updateSeriesInDB = async (id: string, payload: any) => {
-  const { isDraft, availability, genres, releaseYear, rating, views, isPremium, isRecent, isPopularSeries, cast, thumbnail, ...rest } = payload;
+  const { 
+    isDraft, 
+    availability, 
+    genres, 
+    releaseYear, 
+    rating, 
+    views, 
+    isPremium, 
+    isRecent, 
+    isPopularSeries, 
+    cast, 
+    thumbnail,
+    poster,
+    trailerUrl,
+    ...rest 
+  } = payload;
 
   const updateData: any = { ...rest };
+  if (poster) updateData.poster = poster;
+  if (thumbnail && !poster) updateData.poster = thumbnail;
+  if (trailerUrl) updateData.trailerUrl = trailerUrl;
+  
   if (genres) updateData.genres = Array.isArray(genres) ? genres : [genres];
   if (cast) updateData.cast = Array.isArray(cast) ? cast : [cast];
   if (releaseYear !== undefined) updateData.releaseYear = Number(releaseYear);

@@ -118,10 +118,22 @@ const createSeason = catchAsync(async (req: Request, res: Response) => {
   const { seriesId } = req.params;
   const payload = { ...req.body };
 
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.posterFile) payload.poster = req.body.posterFile;
+  if (req.body.trailerFile) payload.trailerUrl = req.body.trailerFile;
+  if (req.body.videoFile) payload.trailerUrl = req.body.videoFile;
+
+  // Handle files from legacy fileUploadHandler if still used
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['posterFile']) {
       payload.poster = (files['posterFile'][0] as any).location || files['posterFile'][0].path;
+    }
+    if (files['trailerFile']) {
+      payload.trailerUrl = (files['trailerFile'][0] as any).location || files['trailerFile'][0].path;
+    }
+    if (files['videoFile']) {
+      payload.trailerUrl = (files['videoFile'][0] as any).location || files['videoFile'][0].path;
     }
   }
 
@@ -149,10 +161,22 @@ const updateSeason = catchAsync(async (req: Request, res: Response) => {
   const { seasonId } = req.params;
   const payload = { ...req.body };
 
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.posterFile) payload.poster = req.body.posterFile;
+  if (req.body.trailerFile) payload.trailerUrl = req.body.trailerFile;
+  if (req.body.videoFile) payload.trailerUrl = req.body.videoFile;
+
+  // Handle files from legacy fileUploadHandler if still used
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['posterFile']) {
       payload.poster = (files['posterFile'][0] as any).location || files['posterFile'][0].path;
+    }
+    if (files['trailerFile']) {
+      payload.trailerUrl = (files['trailerFile'][0] as any).location || files['trailerFile'][0].path;
+    }
+    if (files['videoFile']) {
+      payload.trailerUrl = (files['videoFile'][0] as any).location || files['videoFile'][0].path;
     }
   }
 
@@ -193,6 +217,11 @@ const getEpisodes = catchAsync(async (req: Request, res: Response) => {
 const createEpisode = catchAsync(async (req: Request, res: Response) => {
   const payload = { ...req.body };
 
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.videoFile) payload.videoUrl = req.body.videoFile;
+  if (req.body.thumbnailFile) payload.thumbnail = req.body.thumbnailFile;
+
+  // Handle files from legacy fileUploadHandler if still used
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['videoFile'])
@@ -219,6 +248,11 @@ const createEpisode = catchAsync(async (req: Request, res: Response) => {
 const updateEpisode = catchAsync(async (req: Request, res: Response) => {
   const payload = { ...req.body };
 
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.videoFile) payload.videoUrl = req.body.videoFile;
+  if (req.body.thumbnailFile) payload.thumbnail = req.body.thumbnailFile;
+
+  // Handle files from legacy fileUploadHandler if still used
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['videoFile'])
@@ -287,7 +321,13 @@ const getTransactions = catchAsync(async (req: Request, res: Response) => {
 const createMovie = catchAsync(async (req: Request, res: Response) => {
   const payload = { ...req.body };
   
-  // Handle files from fileUploadHandler
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.posterFile) payload.poster = req.body.posterFile;
+  if (req.body.thumbnailFile) payload.thumbnail = req.body.thumbnailFile;
+  if (req.body.videoFile) payload.videoUrl = req.body.videoFile;
+  if (req.body.trailerFile) payload.trailerUrl = req.body.trailerFile;
+
+  // Handle files from legacy fileUploadHandler if still used
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['videoFile']) payload.videoUrl = (files['videoFile'][0] as any).location || files['videoFile'][0].path;
@@ -308,12 +348,21 @@ const createMovie = catchAsync(async (req: Request, res: Response) => {
 const createSeries = catchAsync(async (req: Request, res: Response) => {
   const payload = { ...req.body };
 
-  // Handle files from fileUploadHandler
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.posterFile) payload.poster = req.body.posterFile;
+  if (req.body.thumbnailFile) payload.thumbnail = req.body.thumbnailFile;
+  if (req.body.trailerFile) payload.trailerUrl = req.body.trailerFile;
+  if (req.body.videoFile) payload.trailerUrl = req.body.videoFile;
+
+  // Handle files from legacy fileUploadHandler if still used
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['trailerFile'])
       payload.trailerUrl =
         (files['trailerFile'][0] as any).location || files['trailerFile'][0].path;
+    if (files['videoFile'])
+      payload.trailerUrl =
+        (files['videoFile'][0] as any).location || files['videoFile'][0].path;
     if (files['posterFile'])
       payload.poster =
         (files['posterFile'][0] as any).location || files['posterFile'][0].path;
@@ -335,12 +384,21 @@ const createSeries = catchAsync(async (req: Request, res: Response) => {
 const updateSeries = catchAsync(async (req: Request, res: Response) => {
   const payload = { ...req.body };
 
-  // Handle files from fileUploadHandler
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.posterFile) payload.poster = req.body.posterFile;
+  if (req.body.thumbnailFile) payload.thumbnail = req.body.thumbnailFile;
+  if (req.body.trailerFile) payload.trailerUrl = req.body.trailerFile;
+  if (req.body.videoFile) payload.trailerUrl = req.body.videoFile;
+
+  // Handle files from legacy fileUploadHandler if still used
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['trailerFile'])
       payload.trailerUrl =
         (files['trailerFile'][0] as any).location || files['trailerFile'][0].path;
+    if (files['videoFile'])
+      payload.trailerUrl =
+        (files['videoFile'][0] as any).location || files['videoFile'][0].path;
     if (files['posterFile'])
       payload.poster =
         (files['posterFile'][0] as any).location || files['posterFile'][0].path;
@@ -389,7 +447,13 @@ const updateMovie = catchAsync(async (req: Request, res: Response) => {
   const { movieId } = req.params;
   const payload = { ...req.body };
 
-  // Handle files if updated
+  // Handle URLs from fileHandler (R2/S3) or fileUploadHandler
+  if (req.body.posterFile) payload.poster = req.body.posterFile;
+  if (req.body.thumbnailFile) payload.thumbnail = req.body.thumbnailFile;
+  if (req.body.videoFile) payload.videoUrl = req.body.videoFile;
+  if (req.body.trailerFile) payload.trailerUrl = req.body.trailerFile;
+
+  // Handle files if updated via legacy fileUploadHandler
   if (req.files) {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files['videoFile']) payload.videoUrl = (files['videoFile'][0] as any).location || files['videoFile'][0].path;

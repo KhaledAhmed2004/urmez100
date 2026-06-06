@@ -3,11 +3,13 @@ import { logger, errorLogger } from '../../shared/logger';
 // Allowed origins for CORS
 export const allowedOrigins: string[] = [
   'http://localhost:3000',
+  'https://brothers-thousands-ballet-previously.trycloudflare.com',
   'https://smrtscrub-medical-app.vercel.app',
   'http://localhost:3001',
   'http://localhost:5174',
   'https://task-titans-admin-orcin.vercel.app',
   'http://localhost:5173',
+  'https://bus-reasoning-punk-topic.trycloudflare.com',
   'http://localhost:5175',
   'https://task-titans-six.vercel.app',
   'https://task-titans-admin.vercel.app',
@@ -26,17 +28,23 @@ export const allowedOrigins: string[] = [
   'http://127.0.0.1:5000',
   'http://127.0.0.1:5001',
   'http://10.10.7.33:5001',
+  'http://10.10.7.47:3000',
+  'http://10.10.7.47:3001',
+  'http://10.10.7.47:5173',
+  'http://10.10.7.47:5174',
+  'http://10.10.7.47:5175',
   // Dev server alternate ports
   'http://localhost:5003',
   'http://127.0.0.1:5003',
   'http://localhost:5005',
   'http://127.0.0.1:5005',
+  'https://aug-was-win-louis.trycloudflare.com',
 
   // adnan
 
   'https://initiative-possess-entrepreneurs-talked.trycloudflare.com',
-  'http://10.10.7.65:3001'
-
+  'http://10.10.7.65:3001',
+  'https://gene-yield-psp-unique.trycloudflare.com',
 ];
 
 // Enable with env CORS_DEBUG=true or CORS_DEBUG=1

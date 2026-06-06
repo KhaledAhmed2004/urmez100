@@ -5,10 +5,9 @@ import { AdminController } from './admin.controller';
 import validateRequest from '../../middlewares/validateRequest';
 import { UserValidation } from '../user/user.validation';
 import { UserController } from '../user/user.controller';
-import fileUploadHandler from '../../middlewares/fileUploadHandler';
+import { fileHandler } from '../../middlewares/fileHandler';
 
 const router = express.Router();
-const upload = fileUploadHandler();
 
 // Dashboard Overview
 router.get(
@@ -111,9 +110,7 @@ router.get(
 router.post(
   '/movies',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([
-    { name: 'videoFile', maxCount: 1 },
-    { name: 'trailerFile', maxCount: 1 },
+  fileHandler([
     { name: 'posterFile', maxCount: 1 },
     { name: 'thumbnailFile', maxCount: 1 },
   ]),
@@ -123,9 +120,7 @@ router.post(
 router.patch(
   '/movies/:movieId',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([
-    { name: 'videoFile', maxCount: 1 },
-    { name: 'trailerFile', maxCount: 1 },
+  fileHandler([
     { name: 'posterFile', maxCount: 1 },
     { name: 'thumbnailFile', maxCount: 1 },
   ]),
@@ -210,7 +205,7 @@ router.get(
 router.post(
   '/series',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([
+  fileHandler([
     { name: 'trailerFile', maxCount: 1 },
     { name: 'posterFile', maxCount: 1 },
     { name: 'thumbnailFile', maxCount: 1 },
@@ -221,7 +216,7 @@ router.post(
 router.patch(
   '/series/:seriesId',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([
+  fileHandler([
     { name: 'trailerFile', maxCount: 1 },
     { name: 'posterFile', maxCount: 1 },
     { name: 'thumbnailFile', maxCount: 1 },
@@ -251,7 +246,7 @@ router.get(
 router.post(
   '/series/:seriesId/seasons',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([{ name: 'posterFile', maxCount: 1 }]),
+  fileHandler([{ name: 'posterFile', maxCount: 1 }]),
   AdminController.createSeason,
 );
 
@@ -264,7 +259,7 @@ router.get(
 router.patch(
   '/series/seasons/:seasonId',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([{ name: 'posterFile', maxCount: 1 }]),
+  fileHandler([{ name: 'posterFile', maxCount: 1 }]),
   AdminController.updateSeason,
 );
 
@@ -284,7 +279,7 @@ router.get(
 router.post(
   '/series/:seriesId/episodes',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([
+  fileHandler([
     { name: 'videoFile', maxCount: 1 },
     { name: 'thumbnailFile', maxCount: 1 },
   ]),
@@ -294,7 +289,7 @@ router.post(
 router.patch(
   '/series/episodes/:episodeId',
   auth(USER_ROLES.SUPER_ADMIN),
-  upload.fields([
+  fileHandler([
     { name: 'videoFile', maxCount: 1 },
     { name: 'thumbnailFile', maxCount: 1 },
   ]),
